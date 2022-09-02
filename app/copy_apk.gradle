@@ -1,0 +1,32 @@
+project.archivesBaseName = "来电音量"
+
+android.applicationVariants.all { variant ->
+    variant.outputs.all {
+        if (outputFileName.endsWith('.apk')) {
+            outputFileName = "${project.archivesBaseName}_v${versionName}_${name}.apk"
+        }
+    }
+
+    File desFilePath = new File("${rootDir}/app/output")
+
+    variant.assembleProvider.configure {
+        it.doLast {
+            variant.outputs.all {
+                try {
+                    //判断文件夹是否存在
+                    if (!desFilePath.exists()) {
+                        desFilePath.mkdir()
+                    }
+                    //将编译好的apk 复制到output目录
+                    copy {
+                        from outputFile
+                        into desFilePath
+                        include '**/*release*.apk'
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+}
