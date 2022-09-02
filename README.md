@@ -4,3 +4,5 @@
  1. Pixel 3（Android 12）
  2. 荣耀 V20（HarmonyOS 2）
  3. 荣耀 9X（MagicUI）
+
+已经有打包好的 [APK](/app/output/RingHelper_v1.0_release.apk 'APK') 了
