@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">来电音量</string>
+    <string name="help_step1">第一步: 点击开始监听按钮，第一次可能需要设置免打扰权限。如下图所示，找到来电音量应用，将来电音量的按钮点击同意该权限</string>
+    <string name="help_step2">第二步：点击屏幕下方第三个按钮或者从手机底部上拉出后台界面，按照图中步骤将应用锁定。</string>
+    <string name="help_step3">第三步：下拉通知栏查看通知栏是否有这条通知，如果有则说明开启成功，没有的话，请点击开启监听按钮</string>
+</resources>
