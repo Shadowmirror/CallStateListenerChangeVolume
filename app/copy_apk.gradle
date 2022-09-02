@@ -1,4 +1,4 @@
-project.archivesBaseName = "来电音量"
+project.archivesBaseName = "RingHelper"
 
 android.applicationVariants.all { variant ->
     variant.outputs.all {

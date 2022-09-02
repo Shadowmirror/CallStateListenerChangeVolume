@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
 import android.telephony.PhoneStateListener
+import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -23,7 +24,6 @@ class PhoneCallStatesService : Service() {
     private lateinit var listener: PhoneStateListener
     private lateinit var mAudioManager: AudioManager
     private var mMaxVolume: Int = 0
-    private var mCurrentVolume: Int = 0
     private var isOnCall: Boolean = false
 
     private val mForegroundNF: ForegroundNotify by lazy { ForegroundNotify(this) }
@@ -69,24 +69,41 @@ class PhoneCallStatesService : Service() {
         if (null == intent) {
             return START_NOT_STICKY
         }
-        listener = object : PhoneStateListener() {
-            override fun onCallStateChanged(state: Int, phoneNumber: String?) {
-                when (state) {
-                    TelephonyManager.CALL_STATE_IDLE -> Log.d(TAG, "onCallStateChanged: 挂断")
-                    TelephonyManager.CALL_STATE_OFFHOOK -> Log.d(TAG, "onCallStateChanged: 接听")
-                    TelephonyManager.CALL_STATE_RINGING -> {
-                        Log.d(TAG, "onCallStateChanged: 响铃")
-                        setStreamVolume(mMaxVolume)
-                    }
-                    else -> {
-                        Log.d(TAG, "onCallStateChanged: Other State")
+        // 解决 Android 12 版本兼容问题
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            telephonyManager.registerTelephonyCallback(
+                this.mainExecutor,
+                object : TelephonyCallback(), TelephonyCallback.CallStateListener {
+                    override fun onCallStateChanged(state: Int) {
+                        checkState(state)
                     }
                 }
+            )
+        } else {
+            listener = object : PhoneStateListener() {
+                override fun onCallStateChanged(state: Int, phoneNumber: String?) {
+                    checkState(state)
+                }
             }
+            telephonyManager.listen(listener, PhoneStateListener.LISTEN_CALL_STATE)
         }
-        telephonyManager.listen(listener, PhoneStateListener.LISTEN_CALL_STATE)
         mForegroundNF.startForegroundNotification()
         return START_STICKY
+    }
+
+    // 根据不同的电话状态做出相应行为
+    private fun checkState(state: Int) {
+        when (state) {
+            TelephonyManager.CALL_STATE_IDLE -> Log.d(TAG, "onCallStateChanged: 挂断")
+            TelephonyManager.CALL_STATE_OFFHOOK -> Log.d(TAG, "onCallStateChanged: 接听")
+            TelephonyManager.CALL_STATE_RINGING -> {
+                Log.d(TAG, "onCallStateChanged: 响铃")
+                setStreamVolume(mMaxVolume)
+            }
+            else -> {
+                Log.d(TAG, "onCallStateChanged: Other State")
+            }
+        }
     }
 
     private fun setStreamVolume(volume: Int) {
@@ -123,7 +140,11 @@ class ForegroundNotify(private val service: PhoneCallStatesService) : ContextWra
                 notificationIntent.addCategory(Intent.CATEGORY_LAUNCHER)
                 notificationIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                 // 动作意图
-                val pendingIntent = PendingIntent.getActivity(this, (Math.random() * 10 + 10).toInt(), notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+                val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    PendingIntent.getActivity(this, (Math.random() * 10 + 10).toInt(), notificationIntent, PendingIntent.FLAG_IMMUTABLE)
+                } else {
+                    PendingIntent.getActivity(this, (Math.random() * 10 + 10).toInt(), notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+                }
                 val notificationBuilder: NotificationCompat.Builder = NotificationCompat.Builder(this, CHANNEL_ID)
                 notificationBuilder.setContentTitle("铃声监听")
                 notificationBuilder.setContentText("防止静音手机导致听不到铃声")
